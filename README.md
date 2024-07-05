@@ -18,7 +18,7 @@ MuezzHome is a Python script that uses Selenium to fetch prayer times from your 
 Clone the repository and navigate to the directory:
 
 ```bash
-git clone https://github.com/hichem95/MuezzHome.git
+git clone https://github.com/kisheedev/MuezzHome.git
 cd MuezzHome
 ```
 Install the dependencies:
