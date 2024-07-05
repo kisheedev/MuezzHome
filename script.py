@@ -33,7 +33,11 @@ class AzanBot:
         self.volumes = None
 
     def read_config(self):
-        with open('/home/pi/Desktop/Azan/config.yaml', 'r') as file:
+    	# Get the absolute path of the current working directory
+	current_directory = os.path.abspath(os.getcwd())
+	# Combine the current directory path with the filename
+	file_path = os.path.join(current_directory, 'config.yaml')
+        with open(file_path, 'r') as file:
             data = yaml.safe_load(file)
             self.mawaqit_url = data["mawaqit_url"]
             self.google_home_name = data["google_home_name"]
