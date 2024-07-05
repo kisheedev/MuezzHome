@@ -1,0 +1,4 @@
+pychromecast
+PyYAML
+selenium
+webdriver-manager
