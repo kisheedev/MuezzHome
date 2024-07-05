@@ -1,6 +1,7 @@
 import time
 import logging
 import traceback
+import os
 from datetime import datetime, timedelta
 
 import pychromecast
@@ -33,10 +34,10 @@ class AzanBot:
         self.volumes = None
 
     def read_config(self):
-    	# Get the absolute path of the current working directory
-	current_directory = os.path.abspath(os.getcwd())
-	# Combine the current directory path with the filename
-	file_path = os.path.join(current_directory, 'config.yaml')
+        # Get the absolute path of the current working directory
+        current_directory = os.path.abspath(os.getcwd())
+        # Combine the current directory path with the filename
+        file_path = os.path.join(current_directory, 'config.yaml')
         with open(file_path, 'r') as file:
             data = yaml.safe_load(file)
             self.mawaqit_url = data["mawaqit_url"]
