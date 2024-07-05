@@ -52,13 +52,13 @@ volumes:
 ```
 ### Configuration Details
 
-* mawaqit_url: The URL of the Mawaqit site where prayer times can be fetched.
-* google_home_name: The name of your Google Home device as it appears in the Google Home app.
-* adhan_url: The URL of the Adhan audio file to be played.
-* fajr_adhan_url: The URL of the Fajr Adhan audio file to be played (optional).
-* volumes: A list of dictionaries specifying the volume levels for each prayer. Each dictionary should have:
-* prayer_name: The name of the prayer (e.g., “Fajr”, “Dhuhr”).
-* volume: The volume level (0-100).
+* `mawaqit_url`: The URL of the Mawaqit site where prayer times can be fetched.
+* `google_home_name`: The name of your Google Home device as it appears in the Google Home app.
+* `adhan_url`: The URL of the Adhan audio file to be played.
+* `fajr_adhan_url`: The URL of the Fajr Adhan audio file to be played (optional).
+* `volumes`: A list of dictionaries specifying the volume levels for each prayer. Each dictionary should have:
+   * `prayer_name`: The name of the prayer (e.g., “Fajr”, “Dhuhr”).
+   * `volume`: The volume level (0-100).
 
 ## Test Scripts
 `test/test_mawaqit.py`
