@@ -1,6 +1,6 @@
 # MuezzHome
 
-MuezzHome is a Python script that uses Selenium to fetch prayer times from a website and plays the Adhan on a Google Home device.
+MuezzHome is a Python script that uses Selenium to fetch prayer times from your mosqur on Mawaqit website and plays the Adhan on your Google Home device.
 
 ## Features
 
