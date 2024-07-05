@@ -35,9 +35,9 @@ class AzanBot:
 
     def read_config(self):
         # Get the absolute path of the current working directory
-        current_directory = os.path.abspath(os.getcwd())
+        path, filename = os.path.split(__file__)
         # Combine the current directory path with the filename
-        file_path = os.path.join(current_directory, 'config.yaml')
+        file_path = os.path.join(path, 'config.yaml')
         with open(file_path, 'r') as file:
             data = yaml.safe_load(file)
             self.mawaqit_url = data["mawaqit_url"]
@@ -176,6 +176,10 @@ class AzanBot:
                 need_to_update = True
 
 if __name__ == '__main__':
-    logger.info(f"Script exécuté à {datetime.now()}")
-    bot = AzanBot()
-    bot.run()
+    try:
+        logger.info(f"Script exécuté à {datetime.now()}")
+        bot = AzanBot()
+        bot.run()
+    except Exception as e:
+        logger.error(f"Erreur lors de l'initialisation: {e}")
+        logger.error(traceback.format_exc())
