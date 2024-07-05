@@ -140,7 +140,7 @@ class AzanBot:
             # Récupération des horaires de prière
             try:
                 if need_to_update is True:
-                    if wait_next_day:
+                    if wait_next_day is True:
                         # Wait until next day + 10 min
                         now = datetime.now()
                         next_day = (now + timedelta(days=1)).replace(hour=0, minute=10, second=0, microsecond=0)
