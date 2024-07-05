@@ -77,7 +77,7 @@ python test_mawaqit.py
 
 Run the script with:
 ```bash
-python azan_bot.py
+python script.py
 ```
 ## Running on a Raspberry Pi
 
@@ -96,9 +96,9 @@ To run the script at startup on your Raspberry Pi, set it up as a cronjob:
 ```bash
 crontab -e
 ```
-2. Add the following line at the end of the crontab file to run the script at startup (Make sure to replace /home/pi/MuezzHome/ with the correct path to your azan_bot.py script):
+2. Add the following line at the end of the crontab file to run the script at startup (Make sure to replace /home/pi/MuezzHome/ with the correct path to your script.py script):
 ```bash
-@reboot /usr/bin/python3 /home/pi/MuezzHome/azan_bot.py 
+@reboot /usr/bin/python3 /home/pi/MuezzHome/script.py 
 ```
 3. Save and exit the editor.
 
