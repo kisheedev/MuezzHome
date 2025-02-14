@@ -88,15 +88,18 @@ class AzanBot:
         current_time = datetime.now()
         next_prayer = None
         min_difference = timedelta(days=1)  # Initialise à un grand intervalle
-
-        for prayer, time_str in prayer_times.items():
-            prayer_time = datetime.strptime(time_str, '%H:%M').replace(year=current_time.year, month=current_time.month,
-                                                                       day=current_time.day)
-            if current_time < prayer_time:
-                time_difference = prayer_time - current_time
-                if time_difference < min_difference:
-                    min_difference = time_difference
-                    next_prayer = (prayer, prayer_time)
+        while next_prayer is None:
+            for prayer, time_str in prayer_times.items():
+                prayer_time = datetime.strptime(time_str, '%H:%M').replace(year=current_time.year, month=current_time.month,
+                                                                           day=current_time.day)
+                if current_time < prayer_time:
+                    time_difference = prayer_time - current_time
+                    if time_difference < min_difference:
+                        min_difference = time_difference
+                        next_prayer = (prayer, prayer_time)
+            if next_prayer is None:
+                logger.error("next_prayer is None, will retry in 1min")
+                time.sleep(60)
 
         return next_prayer
 
@@ -163,7 +166,7 @@ class AzanBot:
 
                 # Calcul du délai avant la prochaine prière
                 delay = (next_prayer[1] - datetime.now()).total_seconds()
-
+                logger.info(f"now waiting {delay} seconds...")
                 # Attendre jusqu'à l'heure de la prière
                 time.sleep(delay)
 

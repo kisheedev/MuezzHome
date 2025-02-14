@@ -9,7 +9,7 @@ cast = chromecasts[0]
 cast.wait()
 cast.set_volume(0.1)
 mc = cast.media_controller
-mc.play_media('https://media.sd.ma/assabile/adhan_3435370/e9bb86af0d30.mp3', 'audio/mp3')
+mc.play_media('http://91.167.152.138:32481/share/Xm9QULyw4FTl5lL_/adhan%20makkah.mp3', 'audio/mp3')
 mc.block_until_active()
 time.sleep(5)
 print(mc.status)

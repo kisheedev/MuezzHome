@@ -1,15 +1,16 @@
 mawaqit_url: https://mawaqit.net/fr/mosquee-ennour-sartrouville
-adhan_url: https://media.sd.ma/assabile/adhan_3435370/e9bb86af0d30.mp3
-fajr_adhan_url: https://media.sd.ma/assabile/adhan_3435370/dcc77fd7b6a1.mp3
+adhan_url: http://91.167.152.138:32481/share/Xm9QULyw4FTl5lL_/adhan%20makkah.mp3
+#https://download.tvquran.com/download/TvQuran.com__Athan/TvQuran.com__05.athan.mp3
+fajr_adhan_url: http://media.sd.ma/assabile/adhan_3435370/dcc77fd7b6a1.mp3
 google_home_name: 'Google Home mini'
 volumes:
   - prayer_name: Fajr
-    volume: 35
+    volume: 50
   - prayer_name: Dhuhr
     volume: 35
   - prayer_name: Asr
     volume: 35
   - prayer_name: Maghrib
-    volume: 40
+    volume: 55
   - prayer_name: Isha
-    volume: 35
+    volume: 50
