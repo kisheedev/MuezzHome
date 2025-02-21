@@ -107,6 +107,15 @@ class AzanBot:
 		
         raise Exception(f"Échec de la récupération des horaires de prière après {max_retries} tentatives.")
 
+    # Format lisible pour le temps d'attente
+    def format_seconds(self, sec):
+        td = timedelta(seconds=sec)
+        return ", ".join(f"{v} {u}" for v, u in 
+                         [(td.days, "jours"), 
+                          (td.seconds // 3600, "heures"), 
+                          (td.seconds % 3600 // 60, "minutes"), 
+                          (td.seconds % 60, "secondes")] if v)
+                      
     def get_next_prayer(self, prayer_times):
         current_time = datetime.now()
         next_prayer = None
@@ -121,9 +130,15 @@ class AzanBot:
                         min_difference = time_difference
                         next_prayer = (prayer, prayer_time)
             if next_prayer is None:
-                logger.error("next_prayer is None, will retry in 1min")
-                time.sleep(60)
-
+                isha_datetime = datetime.strptime(prayer_times['Isha'], '%H:%M')
+                if(isha_datetime - datetime.now()).total_seconds() < 0:
+                    logger.info("No more prayer for today...")
+                    return "NoMore", 0
+                else:
+                    logger.error("next_prayer is None, will retry in 1min")
+                    time.sleep(60)
+        
+        logger.info(f"Prochaine prière: {next_prayer[0]} à {next_prayer[1].strftime('%H:%M')}")
         return next_prayer
 
     def play_adhan_on_google_home(self, prayer_name, max_retries=5, delay=5):
@@ -157,6 +172,20 @@ class AzanBot:
                 time.sleep(delay)
         raise Exception(f"Échec de la lecture de l'adhan après {max_retries} tentatives.")
     
+    def wait_for_next_prayer(self, next_prayer):
+        # Check every minute if it's time for next prayer
+        # When prayer is in less than a minute, check every seconds
+        sleepInSec = 60
+        while(True):
+            delta = int((next_prayer - datetime.now()).total_seconds())
+            if delta <= 0:
+                break
+            elif delta <=60:
+                sleepInSec = 1
+            else:
+                sleepInSec = 60
+            time.sleep(sleepInSec)
+                
     def run(self):
         self.read_config()
         need_to_update = True
@@ -171,7 +200,7 @@ class AzanBot:
                         now = datetime.now()
                         next_day = (now + timedelta(days=1)).replace(hour=0, minute=10, second=0, microsecond=0)
                         time_to_wait = (next_day - now).total_seconds()
-                        logger.info(f"Waiting for {time_to_wait} seconds until the next day.")
+                        logger.info(f"Time to Wait until the next day : {self.format_seconds(time_to_wait)}")
                         time.sleep(time_to_wait)
                     prayer_times = self.get_prayer_times(self.mawaqit_url)
                     logger.info(prayer_times)
@@ -180,20 +209,18 @@ class AzanBot:
                 
                 # Détermination de la prochaine prière
                 next_prayer = self.get_next_prayer(prayer_times)
-                logger.info(f"Prochaine prière: {next_prayer[0]} à {next_prayer[1].strftime('%H:%M')}")
+
                 # Si c'est la derniere prière de la journee, on reactualisera les horraires la prochaine fois:
-                if next_prayer[0] == "Isha":
+                if next_prayer[0] == "Isha" or next_prayer[0] == "NoMore" :
                     need_to_update = True
                     wait_next_day = True
+                
+                if next_prayer[0] != "NoMore":
+                    # Calcul du délai avant la prochaine prière
+                    self.wait_for_next_prayer(next_prayer[1])
 
-                # Calcul du délai avant la prochaine prière
-                delay = (next_prayer[1] - datetime.now()).total_seconds()
-                logger.info(f"now waiting {delay} seconds...")
-                # Attendre jusqu'à l'heure de la prière
-                time.sleep(delay)
-
-                # Jouer l'adhan
-                self.play_adhan_on_google_home(next_prayer[0])
+                    # Jouer l'adhan
+                    self.play_adhan_on_google_home(next_prayer[0])
 
             except Exception as e:
                 logger.error(f"Erreur lors de l'exécution: {e}")
