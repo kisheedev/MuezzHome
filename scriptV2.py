@@ -49,11 +49,11 @@ class AzanBot:
     def get_calendar(self, url, max_retries=5, delay=5):
         for attempt in range(max_retries):
             try:
-                # Créer un buffer pour stocker la réponse HTTP
+                # Create buffer to store HTTP response
                 buffer = BytesIO()
                 custom_headers = ['User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0/8mqLkJuL-86']
 
-                # Initialiser pycurl
+                # Init pycurl
                 c = pycurl.Curl()
                 c.setopt(c.URL, url)
                 c.setopt(c.WRITEFUNCTION, buffer.write)
@@ -62,45 +62,42 @@ class AzanBot:
                 c.perform()
                 c.close()
                 
-                # Extraire le contenu de la réponse
+                # Extract response content
                 html_content = buffer.getvalue().decode('utf-8')
 
-                # Utiliser BeautifulSoup pour analyser le HTML
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                # Trouver le script contenant confData
+                # Search script balise containing var confData
                 script_tag = soup.find("script", string=re.compile("var confData ="))
                 if script_tag:
-                    # Extraire le texte du script
+                    # Extract script text
                     script_text = script_tag.string
 
-                    # Extraire l'objet JSON avec regex
+                    # Extract JSON object with regex
                     match = re.search(r"var confData = (\{.*?\});", script_text, re.DOTALL)
                     if match:
                         conf_data_json = match.group(1)  # Extraire l'objet JSON en texte
                         conf_data = json.loads(conf_data_json)  # Convertir en dictionnaire Python
 
-                        # Extraire les times
+                        # Extract calendar
                         calendar = conf_data.get("calendar", [])
                         return calendar
                     else:
-                        raise Exception("confData non trouvé dans le script.")
+                        raise Exception("var confData nnot found in the script.")
                 else:
-                    raise Exception("Script contenant confData non trouvé.")
+                    raise Exception("Script balise containing 'confData' not found.")
             except Exception as e:
-                logger.error(f"Tentative {attempt + 1} échouée : {e}")
+                logger.error(f"Attempt {attempt + 1} failed : {e}")
                 time.sleep(delay)
 		
-        raise Exception(f"Échec de la récupération des horaires de prière après {max_retries} tentatives.")
+        raise Exception(f"Error while getting prayer times after {max_retries} attempt.")
 
     def get_prayer_times(self, calendar):
         current_time = datetime.now()
         res = calendar[current_time.month - 1][str(current_time.day)]
-
-        # Initialiser un dictionnaire pour stocker les horaires de prière
         prayer_times = {}
                 
-        # Extraire les horaires dans l'ordre Fajr, Dhuhr, Asr, Maghrib, Isha
+        # Extract prayer times in order : Fajr, Dhuhr, Asr, Maghrib, Isha
         if len(res) >= 5:
             prayer_times['Fajr'] = res[0]
             #prayer_times['Chourouk'] = res[1]
@@ -112,19 +109,19 @@ class AzanBot:
         logger.info(prayer_times)
         return prayer_times
         
-    # Format lisible pour le temps d'attente
+
     def format_seconds(self, sec):
         td = timedelta(seconds=sec)
         return ", ".join(f"{v} {u}" for v, u in 
-                         [(td.days, "jours"), 
-                          (td.seconds // 3600, "heures"), 
+                         [(td.days, "days"), 
+                          (td.seconds // 3600, "hours"), 
                           (td.seconds % 3600 // 60, "minutes"), 
-                          (td.seconds % 60, "secondes")] if v)
+                          (td.seconds % 60, "seconds")] if v)
                       
     def get_next_prayer(self, prayer_times):
         current_time = datetime.now()
         next_prayer = None
-        min_difference = timedelta(days=1)  # Initialise à un grand intervalle
+        min_difference = timedelta(days=1) 
         while next_prayer is None:
             for prayer, time_str in prayer_times.items():
                 prayer_time = datetime.strptime(time_str, '%H:%M').replace(year=current_time.year, month=current_time.month,
@@ -143,7 +140,7 @@ class AzanBot:
                     logger.error("next_prayer is None, will retry in 1min")
                     time.sleep(60)
         
-        logger.info(f"Prochaine prière: {next_prayer[0]} à {next_prayer[1].strftime('%H:%M')}")
+        logger.info(f"Next prayer: {next_prayer[0]} time: {next_prayer[1].strftime('%H:%M')}")
         return next_prayer
 
     def play_adhan_on_google_home(self, prayer_name, max_retries=5, delay=5):
@@ -173,9 +170,9 @@ class AzanBot:
                     else:
                         raise Exception("Adhan not played, retry...")
             except Exception as e:
-                logger.error(f"Tentative {attempt + 1} échouée : {e}")
+                logger.error(f"Attempt {attempt + 1} failed : {e}")
                 time.sleep(delay)
-        raise Exception(f"Échec de la lecture de l'adhan après {max_retries} tentatives.")
+        raise Exception(f"Adhan play failed, maximum attempt reached : {max_retries}.")
     
     def wait_for_next_prayer(self, next_prayer):
         # Check every minute if it's time for next prayer
@@ -208,34 +205,34 @@ class AzanBot:
                         logger.info(f"Time to wait until the next day : {self.format_seconds(time_to_wait)}")
                         time.sleep(time_to_wait)
                         wait_next_day = False
-                    # Récupération des horaires de prière
+                    # Get prayer times from calendar
                     prayer_times = self.get_prayer_times(calendar)
                     need_to_update = False
                 
                 # Détermination de la prochaine prière
                 next_prayer = self.get_next_prayer(prayer_times)
 
-                # Si c'est la derniere prière de la journee, on reactualisera les horraires la prochaine fois:
+                # If it's last prayer of the day, we will wait until next day to refresh prayer times
                 if next_prayer[0] == "Isha" or next_prayer[0] == "NoMore" :
                     need_to_update = True
                     wait_next_day = True
                 
                 if next_prayer[0] != "NoMore":
-                    # Calcul du délai avant la prochaine prière
+                    # Compute wait time and wait until next prayer
                     self.wait_for_next_prayer(next_prayer[1])
 
-                    # Jouer l'adhan
+                    # Play Adhan
                     self.play_adhan_on_google_home(next_prayer[0])
 
             except Exception as e:
-                logger.error(f"Erreur lors de l'exécution: {e}")
+                logger.error(f"Execution error: {e}")
                 logger.error(traceback.format_exc())
 
 if __name__ == '__main__':
     try:
-        logger.info(f"Script exécuté à {datetime.now()}")
+        logger.info(f"Script run at {datetime.now()}")
         bot = AzanBot()
         bot.run()
     except Exception as e:
-        logger.error(f"Erreur lors de l'initialisation: {e}")
+        logger.error(f"Init error: {e}")
         logger.error(traceback.format_exc())
