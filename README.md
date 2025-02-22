@@ -6,26 +6,59 @@ MuezzHome is a Python script that uses Selenium to fetch prayer times from your 
 
 - Fetches prayer times from mawaqit website.
 - Plays the Adhan on a Google Home device at each prayer time.
-- Works on a Raspberry Pi.
+- Supports customization for adhan audio. Fajr audio can be different too
+- Supports volume customization for each prayer.
+- Designed to run on a Raspberry Pi.
 
 ## Prerequisites
 
 - Python 3
-- Chromium and ChromeDriver installed on your Raspberry Pi
+- Raspberry Pi
+- Google Home device configured and accessible from the network
 
-## Installation
+## Running on a Raspberry Pi
 
-Clone the repository and navigate to the directory:
-
+### Installation
 ```bash
+cd ~/Desktop
 git clone https://github.com/kisheedev/MuezzHome.git
-cd MuezzHome
+cd ~/Desktop/MuezzHome
 ```
 Install the dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+### Usage
+
+Run the script with:
+```bash
+python script.py
+```
+### Set Up as a Cronjob
+
+To run the script at startup on your Raspberry Pi, set it up as a cronjob:
+
+1. Open the crontab file for the current user:
+```bash
+crontab -e
+```
+2. Add the following line at the end of the crontab file to run the script at startup (Make sure to replace /home/pi/MuezzHome/ with the correct path to your script.py script):
+```bash
+@reboot /usr/bin/python ~/Desktop/MuezzHome/script.py 
+```
+3. Save and exit the editor.
+
+### Verify the Cronjob
+
+To verify that the cronjob has been added correctly, you can list the cron jobs with the following command:
+```bash
+crontab -l
+```
+You should see the line you added to run the script at startup.
+Clone the repository and navigate to the directory:
+
 
 ## Configuration
 
@@ -70,45 +103,9 @@ python test_mawaqit.py
 `test/test_google_home.py`
 This script tests the functionality of playing the Adhan on the Google Home device.
 ```bash 
-python test_mawaqit.py
+python test_google_home.py
 ```
 
-## Usage
-
-Run the script with:
-```bash
-python script.py
-```
-## Running on a Raspberry Pi
-
-### Install Chromium and ChromeDriver
-
-Install Chromium and ChromeDriver on your Raspberry Pi:
-```bash
-sudo apt update
-sudo apt install chromium-browser chromium-chromedriver
-```
-### Set Up as a Cronjob
-
-To run the script at startup on your Raspberry Pi, set it up as a cronjob:
-
-1. Open the crontab file for the current user:
-```bash
-crontab -e
-```
-2. Add the following line at the end of the crontab file to run the script at startup (Make sure to replace /home/pi/MuezzHome/ with the correct path to your script.py script):
-```bash
-@reboot /usr/bin/python3 /home/pi/MuezzHome/script.py 
-```
-3. Save and exit the editor.
-
-### Verify the Cronjob
-
-To verify that the cronjob has been added correctly, you can list the cron jobs with the following command:
-```bash
-crontab -l
-```
-You should see the line you added to run the script at startup.
 
 ## Contributing
 
