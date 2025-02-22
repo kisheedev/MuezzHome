@@ -46,7 +46,7 @@ class AzanBot:
             self.fajr_adhan_url = data["fajr_adhan_url"]
             self.volumes = data["volumes"]
 
-    def get_prayer_times(self, url, max_retries=5, delay=5):
+    def get_calendar(self, url, max_retries=5, delay=5):
         for attempt in range(max_retries):
             try:
                 # Créer un buffer pour stocker la réponse HTTP
@@ -68,9 +68,6 @@ class AzanBot:
                 # Utiliser BeautifulSoup pour analyser le HTML
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                # Initialiser un dictionnaire pour stocker les horaires de prière
-                prayer_times = {}
-
                 # Trouver le script contenant confData
                 script_tag = soup.find("script", string=re.compile("var confData ="))
                 if script_tag:
@@ -84,29 +81,37 @@ class AzanBot:
                         conf_data = json.loads(conf_data_json)  # Convertir en dictionnaire Python
 
                         # Extraire les times
-                        res = conf_data.get("times", [])
-
+                        calendar = conf_data.get("calendar", [])
+                        return calendar
                     else:
                         raise Exception("confData non trouvé dans le script.")
                 else:
                     raise Exception("Script contenant confData non trouvé.")
-                
-                # Extraire les horaires dans l'ordre Fajr, Dhuhr, Asr, Maghrib, Isha
-                if len(res) >= 5:
-                    prayer_times['Fajr'] = res[0]
-                    prayer_times['Dhuhr'] = res[1]
-                    prayer_times['Asr'] = res[2]
-                    prayer_times['Maghrib'] = res[3]
-                    prayer_times['Isha'] = res[4]
-
-                return prayer_times
-
             except Exception as e:
                 logger.error(f"Tentative {attempt + 1} échouée : {e}")
                 time.sleep(delay)
 		
         raise Exception(f"Échec de la récupération des horaires de prière après {max_retries} tentatives.")
 
+    def get_prayer_times(self, calendar):
+        current_time = datetime.now()
+        res = calendar[current_time.month - 1][str(current_time.day)]
+
+        # Initialiser un dictionnaire pour stocker les horaires de prière
+        prayer_times = {}
+                
+        # Extraire les horaires dans l'ordre Fajr, Dhuhr, Asr, Maghrib, Isha
+        if len(res) >= 5:
+            prayer_times['Fajr'] = res[0]
+            #prayer_times['Chourouk'] = res[1]
+            prayer_times['Dhuhr'] = res[2]
+            prayer_times['Asr'] = res[3]
+            prayer_times['Maghrib'] = res[4]
+            prayer_times['Isha'] = res[5]
+
+        logger.info(prayer_times)
+        return prayer_times
+        
     # Format lisible pour le temps d'attente
     def format_seconds(self, sec):
         td = timedelta(seconds=sec)
@@ -188,24 +193,12 @@ class AzanBot:
                 
     def run(self):
         self.read_config()
-        need_to_update = True
-        wait_next_day = False
         prayer_times = {}
+        calendar = self.get_calendar(self.mawaqit_url)
         while True:
-            # Récupération des horaires de prière
             try:
-                if need_to_update is True:
-                    if wait_next_day is True:
-                        # Wait until next day + 10 min
-                        now = datetime.now()
-                        next_day = (now + timedelta(days=1)).replace(hour=0, minute=10, second=0, microsecond=0)
-                        time_to_wait = (next_day - now).total_seconds()
-                        logger.info(f"Time to Wait until the next day : {self.format_seconds(time_to_wait)}")
-                        time.sleep(time_to_wait)
-                    prayer_times = self.get_prayer_times(self.mawaqit_url)
-                    logger.info(prayer_times)
-                    need_to_update = False
-                    wait_next_day = False
+                # Récupération des horaires de prière
+                prayer_times = self.get_prayer_times(calendar)
                 
                 # Détermination de la prochaine prière
                 next_prayer = self.get_next_prayer(prayer_times)
@@ -225,7 +218,6 @@ class AzanBot:
             except Exception as e:
                 logger.error(f"Erreur lors de l'exécution: {e}")
                 logger.error(traceback.format_exc())
-                need_to_update = True
 
 if __name__ == '__main__':
     try:
