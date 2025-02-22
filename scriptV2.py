@@ -5,6 +5,7 @@ import os
 import pycurl
 import re
 import json
+from logging.handlers import TimedRotatingFileHandler
 from io import BytesIO
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -12,17 +13,28 @@ from datetime import datetime, timedelta
 import pychromecast
 import yaml
 
+# Set up log directory
+log_dir = os.path.expanduser("~/Desktop/MuezzHome/logs")  # Change to "/var/log/MuezzHome" for a system-wide log
+os.makedirs(log_dir, exist_ok=True)
 
+# Log file path
+log_file = os.path.join(log_dir, "muezzhome.log")
+
+# Logging setup
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
+
 logFormatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
 
-fileHandler = logging.FileHandler("{0}/{1}.log".format('/home/pi/Desktop/Azan', 'azan_bot'))
+# File handler with rotation (daily)
+fileHandler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 
+# Console handler
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(logFormatter)
+consoleHandler.setLevel(logging.INFO)
 logger.addHandler(consoleHandler)
 
 class AzanBot:
@@ -34,19 +46,33 @@ class AzanBot:
         self.volumes = None
 
     def read_config(self):
-        # Get the absolute path of the current working directory
-        path, filename = os.path.split(__file__)
-        # Combine the current directory path with the filename
+        path = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(path, 'config.yaml')
-        with open(file_path, 'r') as file:
-            data = yaml.safe_load(file)
+
+        try:
+            with open(file_path, 'r') as file:
+                data = yaml.safe_load(file)
+
+            if not all(k in data for k in ["mawaqit_url", "google_home_name", "adhan_url", "volumes"]):
+                raise KeyError("Missing required configuration keys.")
+
             self.mawaqit_url = data["mawaqit_url"]
             self.google_home_name = data["google_home_name"]
             self.adhan_url = data["adhan_url"]
-            self.fajr_adhan_url = data["fajr_adhan_url"]
+            self.fajr_adhan_url = data.get("fajr_adhan_url", self.adhan_url) # Default to adhan_url if missing
             self.volumes = data["volumes"]
 
-    def get_calendar(self, url, max_retries=5, delay=5):
+        except FileNotFoundError:
+            logger.critical("Configuration file 'config.yaml' not found. Please create it.")
+            exit(1)
+        except yaml.YAMLError as e:
+            logger.critical(f"Error parsing 'config.yaml': {e}")
+            exit(1)
+        except KeyError as e:
+            logger.critical(f"Missing key in 'config.yaml': {e}")
+            exit(1)
+
+    def get_calendar(self, url, max_retries=30, delay=60):
         for attempt in range(max_retries):
             try:
                 # Create buffer to store HTTP response
@@ -66,6 +92,7 @@ class AzanBot:
                 html_content = buffer.getvalue().decode('utf-8')
 
                 soup = BeautifulSoup(html_content, 'html.parser')
+                logger.debug(f"Fetched raw HTML: {soup}")
 
                 # Search script balise containing var confData
                 script_tag = soup.find("script", string=re.compile("var confData ="))
@@ -143,36 +170,43 @@ class AzanBot:
         logger.info(f"Next prayer: {next_prayer[0]} time: {next_prayer[1].strftime('%H:%M')}")
         return next_prayer
 
-    def play_adhan_on_google_home(self, prayer_name, max_retries=5, delay=5):
+    def play_adhan_on_google_home(self, prayer_name, max_retries=5, delay=10):
         for attempt in range(max_retries):
             try:
                 chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[self.google_home_name])
+                
                 if not chromecasts:
-                    logger.error(f"No chromecast with name '{self.google_home_name}' found.")
-                    raise Exception(f"ChromeCast not found")
+                    raise ConnectionError(f"No Chromecast found with name '{self.google_home_name}'")
+
+                cast = chromecasts[0]
+                cast.wait()
+
+                volume = next((x['volume'] for x in self.volumes if x['prayer_name'] == prayer_name), 50)
+                cast.set_volume(volume / 100)
+
+                mc = cast.media_controller
+                adhan_url = self.fajr_adhan_url if prayer_name == 'Fajr' and self.fajr_adhan_url else self.adhan_url
+                mc.play_media(adhan_url, 'audio/mp3')
+
+                mc.block_until_active()
+                time.sleep(5)
+
+                if mc.status.player_is_playing:
+                    logger.info(f"Adhan for {prayer_name} played on {self.google_home_name}")
+                    return
                 else:
-                    cast = chromecasts[0]
-                    cast.wait()
-                    # adjust volume
-                    volume = next(x['volume'] for x in self.volumes if x['prayer_name'] == prayer_name)
-                    logger.info(f"volume set to {volume}%")
-                    cast.set_volume(volume / 100)
-                    mc = cast.media_controller
-                    adhan_url = self.adhan_url
-                    if prayer_name == 'Fajr' and self.fajr_adhan_url is not None:
-                        adhan_url = self.fajr_adhan_url
-                    mc.play_media(adhan_url, 'audio/mp3')
-                    mc.block_until_active()
-                    time.sleep(5)
-                    if(mc.status.player_is_playing):
-                        logger.info(f"Adhan for {prayer_name} played on {self.google_home_name}")
-                        return
-                    else:
-                        raise Exception("Adhan not played, retry...")
+                    raise RuntimeError("Adhan did not start playing.")
+
+            except ConnectionError as e:
+                logger.error(f"Attempt {attempt + 1}: {e}")
+            except pychromecast.PyChromecastError as e:
+                logger.error(f"Chromecast error: {e}")
             except Exception as e:
-                logger.error(f"Attempt {attempt + 1} failed : {e}")
-                time.sleep(delay)
-        raise Exception(f"Adhan play failed, maximum attempt reached : {max_retries}.")
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+
+            time.sleep(delay)
+
+        logger.critical(f"Adhan play failed after {max_retries} attempts. Moving to next prayer.")
     
     def wait_for_next_prayer(self, next_prayer):
         # Check every minute if it's time for next prayer
@@ -189,11 +223,16 @@ class AzanBot:
             time.sleep(sleepInSec)
                 
     def run(self):
+        # Init
         self.read_config()
         prayer_times = {}
         need_to_update = True
         wait_next_day = False
         calendar = self.get_calendar(self.mawaqit_url)
+        if not calendar:
+            raise RuntimeError("Failed to retrieve prayer calendar.")
+
+        # Run
         while True:
             try:
                 if need_to_update is True:
@@ -213,7 +252,7 @@ class AzanBot:
                 next_prayer = self.get_next_prayer(prayer_times)
 
                 # If it's last prayer of the day, we will wait until next day to refresh prayer times
-                if next_prayer[0] == "Isha" or next_prayer[0] == "NoMore" :
+                if next_prayer[0] in ["Isha", "NoMore"]:
                     need_to_update = True
                     wait_next_day = True
                 
@@ -225,8 +264,8 @@ class AzanBot:
                     self.play_adhan_on_google_home(next_prayer[0])
 
             except Exception as e:
-                logger.error(f"Execution error: {e}")
-                logger.error(traceback.format_exc())
+                logger.error(f"Execution error: {e}", exc_info=True)
+                time.sleep(60)  # Wait a minute before retrying
 
 if __name__ == '__main__':
     try:
