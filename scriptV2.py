@@ -194,11 +194,23 @@ class AzanBot:
     def run(self):
         self.read_config()
         prayer_times = {}
+        need_to_update = True
+        wait_next_day = False
         calendar = self.get_calendar(self.mawaqit_url)
         while True:
             try:
-                # Récupération des horaires de prière
-                prayer_times = self.get_prayer_times(calendar)
+                if need_to_update is True:
+                    if wait_next_day is True:
+                        # Wait until next day + 10 min
+                        now = datetime.now()
+                        next_day = (now + timedelta(days=1)).replace(hour=0, minute=10, second=0, microsecond=0)
+                        time_to_wait = (next_day - now).total_seconds()
+                        logger.info(f"Time to wait until the next day : {self.format_seconds(time_to_wait)}")
+                        time.sleep(time_to_wait)
+                        wait_next_day = False
+                    # Récupération des horaires de prière
+                    prayer_times = self.get_prayer_times(calendar)
+                    need_to_update = False
                 
                 # Détermination de la prochaine prière
                 next_prayer = self.get_next_prayer(prayer_times)
