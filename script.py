@@ -183,6 +183,7 @@ class AzanBot:
 
                 volume = next((x['volume'] for x in self.volumes if x['prayer_name'] == prayer_name), 50)
                 cast.set_volume(volume / 100)
+                logger.info(f"volume set to {volume}%")
 
                 mc = cast.media_controller
                 adhan_url = self.fajr_adhan_url if prayer_name == 'Fajr' and self.fajr_adhan_url else self.adhan_url
