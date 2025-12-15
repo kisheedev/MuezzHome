@@ -94,14 +94,14 @@ class AzanBot:
                 soup = BeautifulSoup(html_content, 'html.parser')
                 logger.debug(f"Fetched raw HTML: {soup}")
 
-                # Search script balise containing var confData
-                script_tag = soup.find("script", string=re.compile("var confData ="))
+                # Search script balise containing let confData
+                script_tag = soup.find("script", string=re.compile("let confData ="))
                 if script_tag:
                     # Extract script text
                     script_text = script_tag.string
 
                     # Extract JSON object with regex
-                    match = re.search(r"var confData = (\{.*?\});", script_text, re.DOTALL)
+                    match = re.search(r"let confData = (\{.*?\});", script_text, re.DOTALL)
                     if match:
                         conf_data_json = match.group(1)  # Extraire l'objet JSON en texte
                         conf_data = json.loads(conf_data_json)  # Convertir en dictionnaire Python
@@ -110,7 +110,7 @@ class AzanBot:
                         calendar = conf_data.get("calendar", [])
                         return calendar
                     else:
-                        raise Exception("var confData nnot found in the script.")
+                        raise Exception("let confData nnot found in the script.")
                 else:
                     raise Exception("Script balise containing 'confData' not found.")
             except Exception as e:
@@ -171,9 +171,11 @@ class AzanBot:
         return next_prayer
 
     def play_adhan_on_google_home(self, prayer_name, max_retries=5, delay=10):
+        logger.info(f"enter in function play_adhan_on_google_home ..")
         for attempt in range(max_retries):
             try:
                 chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[self.google_home_name])
+                #browser.stop_discovery()
                 
                 if not chromecasts:
                     raise ConnectionError(f"No Chromecast found with name '{self.google_home_name}'")
@@ -210,19 +212,16 @@ class AzanBot:
         logger.critical(f"Adhan play failed after {max_retries} attempts. Moving to next prayer.")
     
     def wait_for_next_prayer(self, next_prayer):
-        # Check every minute if it's time for next prayer
-        # When prayer is in less than a minute, check every seconds
-        sleepInSec = 60
-        while(True):
+        logger.info(f"enter in function wait_for_next_prayer ..")
+        # Wait until the next prayer time
+        while True:
             delta = int((next_prayer - datetime.now()).total_seconds())
             if delta <= 0:
                 break
-            elif delta <=60:
-                sleepInSec = 1
-            else:
-                sleepInSec = 60
-            time.sleep(sleepInSec)
-                
+            time.sleep(min(delta, 60))  # Sleep for at most 60 seconds
+        logger.info(f"exit from function wait_for_next_prayer")
+
+
     def run(self):
         # Init
         self.read_config()

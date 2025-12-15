@@ -31,13 +31,13 @@ def get_prayer_times(url):
     # Exemple d'extraction des horaires (à adapter selon la structure du site)
     try:
         # Trouver le script contenant confData
-        script_tag = soup.find("script", string=re.compile("var confData ="))
+        script_tag = soup.find("script", string=re.compile("let confData ="))
         if script_tag:
             # Extraire le texte du script
             script_text = script_tag.string
 
             # Extraire l'objet JSON avec regex
-            match = re.search(r"var confData = (\{.*?\});", script_text, re.DOTALL)
+            match = re.search(r"let confData = (\{.*?\});", script_text, re.DOTALL)
             if match:
                 conf_data_json = match.group(1)  # Extraire l'objet JSON en texte
                 conf_data = json.loads(conf_data_json)  # Convertir en dictionnaire Python
